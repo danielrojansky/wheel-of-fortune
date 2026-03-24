@@ -193,21 +193,21 @@ export default function EventManager() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => navigate(`/admin/${ev.adminToken}`)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition text-sm font-medium"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 active:bg-purple-300 transition text-sm font-medium"
                     >
                       <Settings className="w-4 h-4" />
                       לוח בקרה
                     </button>
                     <button
                       onClick={() => window.open(`/event/${ev.shareToken}`, '_blank')}
-                      className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition text-sm"
+                      className="flex items-center justify-center gap-2 py-2.5 px-3.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition text-sm"
                       title="פתח דף אירוע"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(ev.adminToken)}
-                      className="flex items-center justify-center gap-2 py-2 px-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition text-sm"
+                      className="flex items-center justify-center gap-2 py-2.5 px-3.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 active:bg-red-200 transition text-sm"
                       title="מחק אירוע"
                     >
                       <Trash2 className="w-4 h-4" />

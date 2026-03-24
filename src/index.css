@@ -4,6 +4,7 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -13,8 +14,35 @@ body {
   background: #f8fafc;
   color: #1e293b;
   min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100dvh;
+}
+
+/* Safe area insets for notched phones */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(0rem, env(safe-area-inset-top));
+}
+
+/* Prevent iOS zoom on input focus */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Animate bounce-in for modals */
+@keyframes bounce-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.4s ease-out;
 }

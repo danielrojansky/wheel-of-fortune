@@ -1,25 +1,35 @@
-import { ChevronDown } from 'lucide-react';
+import { User } from 'lucide-react';
 
 export default function ChildSelector({ children, canSpin, selectedId, onChange, disabled }) {
   // Only show children who haven't spun yet
   const available = Object.entries(children).filter(([id]) => canSpin.includes(id));
 
+  if (available.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="relative">
-      <select
-        value={selectedId}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full appearance-none px-4 py-3 bg-white border-2 border-purple-200 rounded-xl text-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none disabled:opacity-50 disabled:cursor-not-allowed pr-10"
-      >
-        <option value="">בחרו את הילד/ה שלכם...</option>
+    <div className="bg-white rounded-2xl shadow-lg p-4">
+      <h2 className="font-semibold text-gray-700 text-sm mb-3 flex items-center gap-2">
+        <User className="w-4 h-4 text-purple-500" />
+        בחרו את הילד/ה שלכם
+      </h2>
+      <div className="grid grid-cols-3 gap-2">
         {available.map(([id, child]) => (
-          <option key={id} value={id}>
+          <button
+            key={id}
+            onClick={() => onChange(selectedId === id ? '' : id)}
+            disabled={disabled}
+            className={`py-2.5 px-2 rounded-xl text-sm font-medium transition-all border-2 truncate ${
+              selectedId === id
+                ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+            } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95`}
+          >
             {child.name}
-          </option>
+          </button>
         ))}
-      </select>
-      <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+      </div>
     </div>
   );
 }

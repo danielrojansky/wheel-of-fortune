@@ -7,13 +7,18 @@ import EventPage from './components/event/EventPage';
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-dvh bg-gradient-to-b from-purple-50 to-indigo-50">
-        <Routes>
-          <Route path="/" element={<EventManager />} />
-          <Route path="/new" element={<CreateEvent />} />
-          <Route path="/admin/:adminToken" element={<AdminDashboard />} />
-          <Route path="/event/:shareToken" element={<EventPage />} />
-        </Routes>
+      <div className="min-h-dvh bg-gradient-to-b from-purple-50 to-indigo-50 flex flex-col">
+        <div className="flex-1">
+          <Routes>
+            <Route path="/" element={<EventManager />} />
+            <Route path="/new" element={<CreateEvent />} />
+            <Route path="/admin/:adminToken" element={<AdminDashboard />} />
+            <Route path="/event/:shareToken" element={<EventPage />} />
+          </Routes>
+        </div>
+        <footer className="text-center text-xs text-gray-300 py-3 pb-safe">
+          v{__APP_VERSION__}
+        </footer>
       </div>
     </BrowserRouter>
   );

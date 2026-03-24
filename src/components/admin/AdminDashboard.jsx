@@ -127,7 +127,7 @@ export default function AdminDashboard() {
           <input
             readOnly
             value={shareUrl}
-            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm truncate"
+            className="flex-1 min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm truncate"
             dir="ltr"
           />
           <button
@@ -137,20 +137,20 @@ export default function AdminDashboard() {
             {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={shareWhatsApp}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition font-medium"
+            className="flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition font-medium text-sm"
           >
-            <MessageCircle className="w-5 h-5" />
-            שתפו בוואטסאפ
+            <MessageCircle className="w-5 h-5 shrink-0" />
+            <span className="truncate">שתפו בוואטסאפ</span>
           </button>
           <button
             onClick={shareSMS}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium"
+            className="flex items-center justify-center gap-2 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium text-sm"
           >
-            <Share2 className="w-5 h-5" />
-            שתפו ב-SMS
+            <Share2 className="w-5 h-5 shrink-0" />
+            <span className="truncate">שתפו ב-SMS</span>
           </button>
         </div>
       </div>

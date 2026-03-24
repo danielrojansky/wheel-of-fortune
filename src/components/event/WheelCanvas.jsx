@@ -103,16 +103,23 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const container = canvas.parentElement;
-    const size = Math.min(container.clientWidth, 450);
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    draw(ctx, size, currentRotation.current);
+
+    const render = () => {
+      const container = canvas.parentElement;
+      const size = Math.min(container.clientWidth, 400);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      draw(ctx, size, currentRotation.current);
+    };
+
+    render();
+    window.addEventListener('resize', render);
+    return () => window.removeEventListener('resize', render);
   }, [names, draw, rotation]);
 
   // Spin animation
