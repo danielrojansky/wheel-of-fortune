@@ -5,7 +5,6 @@ import { getEvent, spin } from '../../lib/api';
 import WheelCanvas from './WheelCanvas';
 import ChildSelector from './ChildSelector';
 import SpinResult from './SpinResult';
-import AssignmentsList from './AssignmentsList';
 
 export default function EventPage() {
   const { shareToken } = useParams();
@@ -148,8 +147,6 @@ export default function EventPage() {
           </button>
         </>
       )}
-
-      <AssignmentsList assignments={event.assignments} />
 
       {result && !spinning && (
         <SpinResult

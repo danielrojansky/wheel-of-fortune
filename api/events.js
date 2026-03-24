@@ -104,12 +104,12 @@ async function getEvent(req, res) {
     children,
     canReceive,
     canSpin,
-    assignments,
   };
 
   if (isAdmin) {
     result.shareToken = meta.shareToken;
     result.adminToken = admin;
+    result.assignments = assignments;
   }
 
   res.json(result);

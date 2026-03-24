@@ -40,11 +40,10 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Draw text along the segment
+      // Draw text - flip if on the bottom half so it's always readable
       ctx.save();
       ctx.rotate(seg.midAngle);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${fontSize}px "Segoe UI", Tahoma, Arial, sans-serif`;
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
@@ -52,9 +51,23 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
 
-      // Position text at ~60% of radius for good readability
       const textR = radius * 0.62;
-      ctx.fillText(seg.name, textR, 0);
+      // Normalize angle to 0..2PI to determine if text is upside down
+      const absAngle = ((seg.midAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const isBottom = absAngle > Math.PI / 2 && absAngle < (3 * Math.PI) / 2;
+
+      if (isBottom) {
+        // Flip 180° so text reads right-side-up
+        ctx.translate(textR, 0);
+        ctx.rotate(Math.PI);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(seg.name, 0, 0);
+      } else {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(seg.name, textR, 0);
+      }
       ctx.restore();
     });
 

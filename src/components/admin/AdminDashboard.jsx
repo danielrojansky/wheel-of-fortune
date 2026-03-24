@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Copy, Check, Share2, MessageCircle, QrCode, Plus, Trash2, Gift, Users } from 'lucide-react';
-import { getAdminEvent, addChild, removeChild } from '../../lib/api';
+import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw } from 'lucide-react';
+import { getAdminEvent, addChild, removeChild, resetEvent } from '../../lib/api';
 
 export default function AdminDashboard() {
   const { adminToken } = useParams();
@@ -66,6 +66,16 @@ export default function AdminDashboard() {
     if (!confirm('בטוח להסיר?')) return;
     try {
       await removeChild(adminToken, childId);
+      await fetchEvent();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('בטוח לאפס את האירוע? כל ההגרלות יימחקו וכל הילדים יחזרו לרשימה.')) return;
+    try {
+      await resetEvent(adminToken);
       await fetchEvent();
     } catch (err) {
       alert(err.message);
@@ -154,8 +164,8 @@ export default function AdminDashboard() {
               <div key={i} className="flex items-center gap-2 text-sm bg-purple-50 rounded-lg p-2.5">
                 <Gift className="w-4 h-4 text-purple-400" />
                 <span className="font-medium">{a.giverName}</span>
-                <span className="text-gray-400">←</span>
-                <span className="font-medium">{a.receiverName}</span>
+                <span className="text-gray-400">→</span>
+                <span className="font-medium text-purple-600">{a.receiverName}</span>
               </div>
             ))}
           </div>
@@ -208,6 +218,18 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Reset Event */}
+      <div className="bg-white rounded-2xl shadow-lg p-5">
+        <button
+          onClick={handleReset}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition font-medium border border-red-200"
+        >
+          <RotateCcw className="w-5 h-5" />
+          איפוס אירוע
+        </button>
+        <p className="text-xs text-gray-400 text-center mt-2">מוחק את כל ההגרלות ומאפשר להתחיל מחדש</p>
       </div>
     </div>
   );

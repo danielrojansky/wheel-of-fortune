@@ -53,3 +53,10 @@ export function spin(shareToken, giverId) {
 export function getPairings(shareToken) {
   return request(`/pairings?token=${shareToken}`);
 }
+
+export function resetEvent(adminToken) {
+  return request('/reset', {
+    method: 'POST',
+    body: JSON.stringify({ adminToken }),
+  });
+}
