@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw, ArrowRight } from 'lucide-react';
 import { getAdminEvent, addChild, removeChild, resetEvent } from '../../lib/api';
+import { saveEvent } from '../../lib/eventsStorage';
 
 export default function AdminDashboard() {
   const { adminToken } = useParams();
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
     try {
       const data = await getAdminEvent(adminToken);
       setEvent(data);
+      saveEvent(adminToken, data.eventName);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -103,6 +105,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 transition"
+      >
+        <ArrowRight className="w-4 h-4" />
+        חזרה לאירועים
+      </Link>
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-800">{event.eventName}</h1>
         <p className="text-gray-500 mt-1">לוח בקרה</p>

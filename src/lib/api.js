@@ -60,3 +60,17 @@ export function resetEvent(adminToken) {
     body: JSON.stringify({ adminToken }),
   });
 }
+
+export function updateEvent(adminToken, name) {
+  return request('/events', {
+    method: 'PATCH',
+    body: JSON.stringify({ adminToken, name }),
+  });
+}
+
+export function deleteEvent(adminToken) {
+  return request('/events', {
+    method: 'DELETE',
+    body: JSON.stringify({ adminToken }),
+  });
+}

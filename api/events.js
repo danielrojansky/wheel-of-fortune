@@ -11,6 +11,12 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       return await getEvent(req, res);
     }
+    if (req.method === 'PATCH') {
+      return await updateEvent(req, res);
+    }
+    if (req.method === 'DELETE') {
+      return await deleteEvent(req, res);
+    }
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('events handler error:', err);
@@ -113,4 +119,44 @@ async function getEvent(req, res) {
   }
 
   res.json(result);
+}
+
+async function updateEvent(req, res) {
+  const { adminToken, name } = req.body;
+  if (!adminToken || !name?.trim()) {
+    return res.status(400).json({ error: 'נדרש שם אירוע' });
+  }
+
+  const eventId = await redis.get(`wheel:admin:${adminToken}`);
+  if (!eventId) return res.status(403).json({ error: 'אין הרשאה' });
+
+  await redis.hset(`wheel:event:${eventId}`, { name: name.trim() });
+  res.json({ ok: true, name: name.trim() });
+}
+
+async function deleteEvent(req, res) {
+  const { adminToken } = req.body;
+  if (!adminToken) {
+    return res.status(400).json({ error: 'Missing adminToken' });
+  }
+
+  const eventId = await redis.get(`wheel:admin:${adminToken}`);
+  if (!eventId) return res.status(403).json({ error: 'אין הרשאה' });
+
+  const meta = await redis.hgetall(`wheel:event:${eventId}`);
+  if (!meta) return res.status(404).json({ error: 'אירוע לא נמצא' });
+
+  // Delete all event-related keys
+  await Promise.all([
+    redis.del(`wheel:event:${eventId}`),
+    redis.del(`wheel:event:${eventId}:children`),
+    redis.del(`wheel:event:${eventId}:canReceive`),
+    redis.del(`wheel:event:${eventId}:canSpin`),
+    redis.del(`wheel:event:${eventId}:assignments`),
+    redis.del(`wheel:event:${eventId}:spinlock`),
+    redis.del(`wheel:admin:${adminToken}`),
+    meta.shareToken ? redis.del(`wheel:share:${meta.shareToken}`) : Promise.resolve(),
+  ]);
+
+  res.json({ ok: true });
 }

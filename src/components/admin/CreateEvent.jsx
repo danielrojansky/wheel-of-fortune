@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Sparkles } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Plus, Trash2, Sparkles, ArrowRight } from 'lucide-react';
 import { createEvent } from '../../lib/api';
+import { saveEvent } from '../../lib/eventsStorage';
 
 const DEFAULT_NAMES = [
   'עומר ר', 'גאיה ע', 'מאיה', 'עידו', 'נועה', 'ליבי', 'יובל',
@@ -39,6 +40,7 @@ export default function CreateEvent() {
     setError('');
     try {
       const { adminToken } = await createEvent(eventName, names);
+      saveEvent(adminToken, eventName);
       navigate(`/admin/${adminToken}`);
     } catch (err) {
       setError(err.message);
@@ -49,6 +51,13 @@ export default function CreateEvent() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 transition mb-4"
+      >
+        <ArrowRight className="w-4 h-4" />
+        חזרה לאירועים
+      </Link>
       <div className="text-center mb-8">
         <Sparkles className="w-12 h-12 text-purple-500 mx-auto mb-3" />
         <h1 className="text-3xl font-bold text-gray-800">גלגל מתנות</h1>
