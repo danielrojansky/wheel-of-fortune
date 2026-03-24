@@ -29,6 +29,9 @@ export default function EventPage() {
     if (spinningRef.current) return;
     try {
       const data = await getEvent(shareToken);
+      // Sort arrays so Redis' arbitrary SMEMBERS order doesn't cause false diffs
+      if (data.canReceive) data.canReceive.sort();
+      if (data.canSpin) data.canSpin.sort();
       const json = JSON.stringify(data);
       // Only update state if data actually changed
       if (json !== lastDataRef.current) {
