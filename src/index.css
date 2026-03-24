@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  direction: rtl;
+  background: #f8fafc;
+  color: #1e293b;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
+}
