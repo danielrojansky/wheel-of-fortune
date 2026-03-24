@@ -9,11 +9,21 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
 
   const draw = useCallback((ctx, size, rot) => {
     const center = size / 2;
-    const radius = center - 10;
+    const radius = center - 14;
     const segments = getSegments(names);
-    const fontSize = getFontSize(names.length, radius);
+    const n = names.length;
+    const fontSize = Math.max(11, Math.min(18, radius * 0.09));
 
     ctx.clearRect(0, 0, size, size);
+
+    // Draw outer ring shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(center, center, radius + 6, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(124, 58, 237, 0.15)';
+    ctx.fill();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(rot);
@@ -26,42 +36,48 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
       ctx.closePath();
       ctx.fillStyle = getColor(i);
       ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Draw text
+      // Draw text along the segment
       ctx.save();
       ctx.rotate(seg.midAngle);
-      ctx.textAlign = 'right';
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${fontSize}px "Segoe UI", Tahoma, Arial, sans-serif`;
-      ctx.shadowColor = 'rgba(0,0,0,0.3)';
-      ctx.shadowBlur = 2;
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
 
-      const textX = radius * 0.85;
-      ctx.fillText(seg.name, textX, 0);
+      // Position text at ~60% of radius for good readability
+      const textR = radius * 0.62;
+      ctx.fillText(seg.name, textR, 0);
       ctx.restore();
     });
 
     ctx.restore();
 
-    // Draw center circle
+    // Draw center circle with gradient
+    const grad = ctx.createRadialGradient(center, center, 0, center, center, radius * 0.12);
+    grad.addColorStop(0, '#fff');
+    grad.addColorStop(1, '#f3f0ff');
     ctx.beginPath();
-    ctx.arc(center, center, radius * 0.08, 0, 2 * Math.PI);
-    ctx.fillStyle = '#fff';
+    ctx.arc(center, center, radius * 0.1, 0, 2 * Math.PI);
+    ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = '#e5e7eb';
+    ctx.strokeStyle = '#d4d0e0';
     ctx.lineWidth = 2;
     ctx.stroke();
 
     // Draw pointer (triangle at top)
-    const pSize = 18;
+    const pSize = 16;
     ctx.beginPath();
-    ctx.moveTo(center, 6);
-    ctx.lineTo(center - pSize, -4);
-    ctx.lineTo(center + pSize, -4);
+    ctx.moveTo(center, 8);
+    ctx.lineTo(center - pSize, -6);
+    ctx.lineTo(center + pSize, -6);
     ctx.closePath();
     ctx.fillStyle = '#7c3aed';
     ctx.fill();
@@ -75,7 +91,7 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
     const canvas = canvasRef.current;
     if (!canvas) return;
     const container = canvas.parentElement;
-    const size = Math.min(container.clientWidth, 400);
+    const size = Math.min(container.clientWidth, 450);
     const dpr = window.devicePixelRatio || 1;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
