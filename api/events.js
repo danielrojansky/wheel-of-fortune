@@ -4,13 +4,18 @@ import { generateEventId, generateAdminToken, generateShareToken, generateChildI
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
-  if (req.method === 'POST') {
-    return createEvent(req, res);
+  try {
+    if (req.method === 'POST') {
+      return await createEvent(req, res);
+    }
+    if (req.method === 'GET') {
+      return await getEvent(req, res);
+    }
+    res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('events handler error:', err);
+    res.status(500).json({ error: 'שגיאה פנימית בשרת' });
   }
-  if (req.method === 'GET') {
-    return getEvent(req, res);
-  }
-  res.status(405).json({ error: 'Method not allowed' });
 }
 
 async function createEvent(req, res) {

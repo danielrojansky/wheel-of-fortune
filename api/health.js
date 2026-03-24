@@ -1,8 +1,10 @@
-export default function handler(req, res) {
-  res.json({
-    ok: true,
-    hasUrl: !!process.env.KV_REST_API_URL,
-    hasToken: !!process.env.KV_REST_API_TOKEN,
-    nodeVersion: process.version,
-  });
+import redis from './_lib/redis.js';
+
+export default async function handler(req, res) {
+  try {
+    await redis.ping();
+    res.json({ ok: true, redis: 'connected' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, stack: err.stack });
+  }
 }
