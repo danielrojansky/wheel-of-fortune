@@ -106,7 +106,7 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
 
     const render = () => {
       const container = canvas.parentElement;
-      const size = Math.min(container.clientWidth, 400);
+      const size = Math.min(container.clientWidth, container.clientHeight, 400);
       const dpr = window.devicePixelRatio || 1;
       canvas.width = size * dpr;
       canvas.height = size * dpr;
@@ -165,8 +165,8 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
   }
 
   return (
-    <div className="flex justify-center w-full">
-      <canvas ref={canvasRef} className="max-w-full" />
+    <div className="flex justify-center items-center w-full h-full">
+      <canvas ref={canvasRef} className="max-w-full max-h-full" />
     </div>
   );
 }

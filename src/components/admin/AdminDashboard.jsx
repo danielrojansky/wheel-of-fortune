@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw, ArrowRight } from 'lucide-react';
+import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw, ArrowRight, Download, ClipboardList } from 'lucide-react';
 import { getAdminEvent, addChild, removeChild, resetEvent } from '../../lib/api';
 import { saveEvent } from '../../lib/eventsStorage';
 
@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [copied, setCopied] = useState(false);
   const [newChildName, setNewChildName] = useState('');
   const [addingChild, setAddingChild] = useState(false);
+  const [copiedResults, setCopiedResults] = useState(false);
 
   const fetchEvent = async () => {
     try {
@@ -82,6 +83,33 @@ export default function AdminDashboard() {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  const getResultsText = () => {
+    if (!event?.assignments?.length) return '';
+    return event.assignments.map((a) => `${a.giverName} → ${a.receiverName}`).join('\n');
+  };
+
+  const copyResults = async () => {
+    const text = `${event.eventName} - תוצאות הגרלה\n\n${getResultsText()}`;
+    await navigator.clipboard.writeText(text);
+    setCopiedResults(true);
+    setTimeout(() => setCopiedResults(false), 2000);
+  };
+
+  const exportCSV = () => {
+    if (!event?.assignments?.length) return;
+    const bom = '\uFEFF';
+    const header = 'נותנ/ת מתנה,מקבל/ת מתנה';
+    const rows = event.assignments.map((a) => `${a.giverName},${a.receiverName}`);
+    const csv = bom + [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${event.eventName} - תוצאות.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -168,16 +196,34 @@ export default function AdminDashboard() {
           />
         </div>
         {event.assignments?.length > 0 && (
-          <div className="space-y-2">
-            {event.assignments.map((a, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm bg-purple-50 rounded-lg p-2.5">
-                <Gift className="w-4 h-4 text-purple-400" />
-                <span className="font-medium">{a.giverName}</span>
-                <span className="text-gray-400">→</span>
-                <span className="font-medium text-purple-600">{a.receiverName}</span>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="space-y-2">
+              {event.assignments.map((a, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm bg-purple-50 rounded-lg p-2.5">
+                  <Gift className="w-4 h-4 text-purple-400" />
+                  <span className="font-medium">{a.giverName}</span>
+                  <span className="text-gray-400">→</span>
+                  <span className="font-medium text-purple-600">{a.receiverName}</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button
+                onClick={copyResults}
+                className="flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition text-sm font-medium"
+              >
+                {copiedResults ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardList className="w-4 h-4" />}
+                {copiedResults ? 'הועתק!' : 'העתק תוצאות'}
+              </button>
+              <button
+                onClick={exportCSV}
+                className="flex items-center justify-center gap-2 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                ייצוא CSV
+              </button>
+            </div>
+          </>
         )}
       </div>
 

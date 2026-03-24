@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { getEvent, spin } from '../../lib/api';
@@ -16,11 +16,25 @@ export default function EventPage() {
   const [targetIndex, setTargetIndex] = useState(null);
   const [result, setResult] = useState(null);
   const [spinError, setSpinError] = useState('');
+  const lastDataRef = useRef('');
+  const spinningRef = useRef(false);
+
+  // Keep ref in sync so the interval callback sees current value
+  useEffect(() => {
+    spinningRef.current = spinning;
+  }, [spinning]);
 
   const fetchEvent = useCallback(async () => {
+    // Don't update state while spinning — prevents flashing
+    if (spinningRef.current) return;
     try {
       const data = await getEvent(shareToken);
-      setEvent(data);
+      const json = JSON.stringify(data);
+      // Only update state if data actually changed
+      if (json !== lastDataRef.current) {
+        lastDataRef.current = json;
+        setEvent(data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,6 +98,8 @@ export default function EventPage() {
     setResult(null);
     setSelectedChild('');
     setTargetIndex(null);
+    // Clear cache so next fetch always updates
+    lastDataRef.current = '';
     fetchEvent();
   };
 
@@ -106,19 +122,21 @@ export default function EventPage() {
   const allDone = event.canSpin.length === 0;
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      <div className="text-center">
-        <Sparkles className="w-10 h-10 text-purple-500 mx-auto mb-2" />
-        <h1 className="text-2xl font-bold text-gray-800">{event.eventName}</h1>
-        <p className="text-gray-500 text-sm mt-1">
+    <div className="max-w-lg mx-auto px-4 py-3 flex flex-col h-dvh">
+      <div className="text-center py-2">
+        <h1 className="text-xl font-bold text-gray-800 flex items-center justify-center gap-2">
+          <Sparkles className="w-6 h-6 text-purple-500" />
+          {event.eventName}
+        </h1>
+        <p className="text-gray-500 text-xs mt-0.5">
           {allDone
             ? 'כל המתנות חולקו! 🎉'
-            : `בחרו את הילד/ה שלכם וסובבו את הגלגל`}
+            : 'בחרו את הילד/ה שלכם וסובבו את הגלגל'}
         </p>
       </div>
 
       {!allDone && (
-        <>
+        <div className="flex flex-col flex-1 min-h-0 gap-2">
           <ChildSelector
             children={event.children}
             canSpin={event.canSpin}
@@ -127,25 +145,27 @@ export default function EventPage() {
             disabled={spinning}
           />
 
-          <WheelCanvas
-            names={wheelNames}
-            targetIndex={targetIndex}
-            spinning={spinning}
-            onSpinEnd={handleSpinEnd}
-          />
+          <div className="flex-1 min-h-0 flex items-center">
+            <WheelCanvas
+              names={wheelNames}
+              targetIndex={targetIndex}
+              spinning={spinning}
+              onSpinEnd={handleSpinEnd}
+            />
+          </div>
 
           {spinError && (
-            <div className="text-red-600 text-sm bg-red-50 rounded-lg p-3 text-center">{spinError}</div>
+            <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2 text-center">{spinError}</div>
           )}
 
           <button
             onClick={handleSpin}
             disabled={!selectedChild || spinning || wheelItems.length === 0}
-            className="w-full py-3.5 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-lg shadow-purple-200"
+            className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-lg shadow-purple-200 shrink-0 mb-2"
           >
             {spinning ? 'הגלגל מסתובב...' : 'סובבו את הגלגל! 🎡'}
           </button>
-        </>
+        </div>
       )}
 
       {result && !spinning && (
