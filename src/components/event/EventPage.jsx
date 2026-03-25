@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { getEvent, spin } from '../../lib/api';
@@ -17,8 +17,10 @@ export default function EventPage() {
   const [result, setResult] = useState(null);
   const [spinError, setSpinError] = useState('');
   const [hasSpun, setHasSpun] = useState(false);
-  // The name the wheel ACTUALLY landed on (reverse-computed from final rotation)
-  const [landedName, setLandedName] = useState('');
+  const [showResult, setShowResult] = useState(false);
+
+  // Ref to hold the wheel's names so we can read the landed name at spin-end
+  const wheelNamesRef = useRef([]);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -31,12 +33,8 @@ export default function EventPage() {
     }
   }, [shareToken]);
 
-  // Fetch once on load — no polling
-  useEffect(() => {
-    fetchEvent();
-  }, [fetchEvent]);
+  useEffect(() => { fetchEvent(); }, [fetchEvent]);
 
-  // Memoize wheel items so they only change when actual data changes
   const wheelItems = useMemo(() => {
     if (!event) return [];
     return event.canReceive
@@ -46,24 +44,21 @@ export default function EventPage() {
 
   const wheelNames = useMemo(() => wheelItems.map((w) => w.name), [wheelItems]);
 
+  // Keep ref in sync
+  wheelNamesRef.current = wheelNames;
+
   const handleSpin = async () => {
     if (!selectedChild || spinning || hasSpun) return;
     setSpinError('');
-
     if (wheelItems.length === 0) {
       setSpinError('אין ילדים זמינים לבחירה');
       return;
     }
-
     try {
       setSpinning(true);
       const res = await spin(shareToken, selectedChild);
-
-      // Find the index of the selected receiver in the current wheel
       const idx = wheelItems.findIndex((w) => w.id === res.receiverId);
       setTargetIndex(idx >= 0 ? idx : 0);
-
-      // Store result for after animation
       setResult(res);
       setHasSpun(true);
     } catch (err) {
@@ -72,23 +67,26 @@ export default function EventPage() {
     }
   };
 
-  // Called by WheelCanvas with the index of the segment that actually ended up at the pointer
-  const handleSpinEnd = useCallback((actualLandedIndex) => {
+  // WheelCanvas calls this with the index of the segment at the pointer
+  const handleSpinEnd = useCallback((landedIndex) => {
     setSpinning(false);
-    // Use the name from the wheel's actual visual landing position
-    if (actualLandedIndex != null && wheelNames[actualLandedIndex]) {
-      setLandedName(wheelNames[actualLandedIndex]);
-      console.log('[EventPage] Wheel landed on:', wheelNames[actualLandedIndex],
-        '| API assigned:', result?.receiverName);
+
+    // Override the result's receiver name with whatever the wheel actually shows
+    const landedName = wheelNamesRef.current[landedIndex];
+    if (landedName) {
+      setResult((prev) =>
+        prev ? { ...prev, displayName: landedName } : prev
+      );
     }
-  }, [wheelNames, result]);
+    setShowResult(true);
+  }, []);
 
   const handleCloseResult = () => {
     setResult(null);
+    setShowResult(false);
     setSelectedChild('');
     setTargetIndex(null);
     setHasSpun(false);
-    setLandedName('');
     fetchEvent();
   };
 
@@ -99,7 +97,6 @@ export default function EventPage() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="max-w-lg mx-auto px-4 py-8 text-center">
@@ -109,10 +106,6 @@ export default function EventPage() {
   }
 
   const allDone = event.canSpin.length === 0;
-
-  // Use the wheel-landed name for the popup (guaranteed to match the visual)
-  // Fall back to API result name if landed name isn't available
-  const displayReceiverName = landedName || result?.receiverName || '';
 
   return (
     <div className="max-w-lg mx-auto px-4 py-3 flex flex-col h-dvh">
@@ -148,7 +141,9 @@ export default function EventPage() {
           </div>
 
           {spinError && (
-            <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2 text-center">{spinError}</div>
+            <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2 text-center">
+              {spinError}
+            </div>
           )}
 
           <button
@@ -161,10 +156,10 @@ export default function EventPage() {
         </div>
       )}
 
-      {result && !spinning && (
+      {result && showResult && !spinning && (
         <SpinResult
           giverName={result.giverName}
-          receiverName={displayReceiverName}
+          receiverName={result.displayName || result.receiverName}
           onClose={handleCloseResult}
         />
       )}

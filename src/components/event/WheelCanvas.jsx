@@ -1,200 +1,237 @@
-import { useRef, useEffect, useCallback, useState, memo } from 'react';
-import { getSegments, getColor } from '../../lib/wheelMath';
+import { useRef, useEffect } from 'react';
 
-function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
+// ── Colors ──────────────────────────────────────────────
+const COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
+];
+
+// ── Pure drawing function (no React, no state) ─────────
+function drawWheel(ctx, size, names, angle) {
+  const n = names.length;
+  if (n === 0) return;
+
+  const center = size / 2;
+  const radius = center - 14;
+  const arc = (2 * Math.PI) / n;
+  const fontSize = Math.max(11, Math.min(18, radius * 0.09));
+
+  ctx.clearRect(0, 0, size, size);
+
+  // Outer ring shadow
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center, center, radius + 6, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(124, 58, 237, 0.15)';
+  ctx.fill();
+  ctx.restore();
+
+  // ── Rotated wheel ──
+  ctx.save();
+  ctx.translate(center, center);
+  ctx.rotate(angle);
+
+  for (let i = 0; i < n; i++) {
+    const start = i * arc - Math.PI / 2;
+    const end = (i + 1) * arc - Math.PI / 2;
+    const mid = (i + 0.5) * arc - Math.PI / 2;
+
+    // Segment fill
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Text
+    ctx.save();
+    ctx.rotate(mid);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${fontSize}px "Segoe UI", Tahoma, Arial, sans-serif`;
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const textR = radius * 0.62;
+    // Flip text that would appear upside-down
+    const visualAngle = ((angle + mid) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    const upsideDown = visualAngle > Math.PI / 2 && visualAngle < 1.5 * Math.PI;
+
+    if (upsideDown) {
+      ctx.translate(textR, 0);
+      ctx.rotate(Math.PI);
+      ctx.fillText(names[i], 0, 0);
+    } else {
+      ctx.fillText(names[i], textR, 0);
+    }
+    ctx.restore();
+  }
+  ctx.restore(); // end wheel rotation
+
+  // ── Center hub ──
+  const grad = ctx.createRadialGradient(center, center, 0, center, center, radius * 0.12);
+  grad.addColorStop(0, '#fff');
+  grad.addColorStop(1, '#f3f0ff');
+  ctx.beginPath();
+  ctx.arc(center, center, radius * 0.1, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#d4d0e0';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // ── Pointer (triangle at 12-o'clock, OUTSIDE rotation) ──
+  const ps = 16;
+  ctx.beginPath();
+  ctx.moveTo(center, 8);
+  ctx.lineTo(center - ps, -6);
+  ctx.lineTo(center + ps, -6);
+  ctx.closePath();
+  ctx.fillStyle = '#7c3aed';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ── Given a rotation angle, return which segment index is at the pointer ──
+function segmentAtPointer(angle, count) {
+  // Pointer is at 12 o'clock. Segment i spans [i*arc, (i+1)*arc] from 12 o'clock.
+  // After rotating by `angle`, the segment at the pointer is:
+  //   i = floor( (-angle mod 2PI) / arc )
+  const arc = (2 * Math.PI) / count;
+  const negAngle = ((-angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.floor(negAngle / arc) % count;
+}
+
+// ── Component ───────────────────────────────────────────
+export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd }) {
   const canvasRef = useRef(null);
-  const animRef = useRef(null);
-  const [rotation, setRotation] = useState(0);
-  const currentRotation = useRef(0);
-  const prevNamesKey = useRef('');
-  // Use a ref for the callback so changing it doesn't restart the animation
+  const animIdRef = useRef(null);
+  const angleRef = useRef(0);
+  const dprRef = useRef(1);
+  const sizeRef = useRef(0);
+
+  // Always keep latest callback in a ref (never a dependency)
   const onSpinEndRef = useRef(onSpinEnd);
   onSpinEndRef.current = onSpinEnd;
 
-  // Reset rotation when the set of names changes
-  const namesKey = names.join('|');
-  if (namesKey !== prevNamesKey.current) {
-    prevNamesKey.current = namesKey;
-    currentRotation.current = 0;
-  }
+  // Keep latest names in a ref for the animation closure
+  const namesRef = useRef(names);
+  namesRef.current = names;
 
-  const draw = useCallback((ctx, size, rot) => {
-    const center = size / 2;
-    const radius = center - 14;
-    const segments = getSegments(names);
-    const fontSize = Math.max(11, Math.min(18, radius * 0.09));
+  // ── Sizing helper ──
+  const setupCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return false;
+    const container = canvas.parentElement;
+    const size = Math.min(container.clientWidth, container.clientHeight, 400);
+    if (size <= 0) return false;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+    dprRef.current = dpr;
+    sizeRef.current = size;
+    return true;
+  };
 
-    ctx.clearRect(0, 0, size, size);
-
-    // Draw outer ring shadow
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(center, center, radius + 6, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(124, 58, 237, 0.15)';
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(rot);
-
-    // Draw segments
-    segments.forEach((seg, i) => {
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, radius, seg.startAngle, seg.endAngle);
-      ctx.closePath();
-      ctx.fillStyle = getColor(i);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Draw text - flip if on the bottom half so it's always readable
-      ctx.save();
-      ctx.rotate(seg.midAngle);
-
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${fontSize}px "Segoe UI", Tahoma, Arial, sans-serif`;
-      ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.shadowBlur = 3;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-
-      const textR = radius * 0.62;
-      // Normalize the total angle (rotation + segment mid) to determine if text is upside down
-      const totalAngle = rot + seg.midAngle;
-      const absAngle = ((totalAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      const isBottom = absAngle > Math.PI / 2 && absAngle < (3 * Math.PI) / 2;
-
-      if (isBottom) {
-        ctx.translate(textR, 0);
-        ctx.rotate(Math.PI);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(seg.name, 0, 0);
-      } else {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(seg.name, textR, 0);
-      }
-      ctx.restore();
-    });
-
-    ctx.restore();
-
-    // Draw center circle with gradient
-    const grad = ctx.createRadialGradient(center, center, 0, center, center, radius * 0.12);
-    grad.addColorStop(0, '#fff');
-    grad.addColorStop(1, '#f3f0ff');
-    ctx.beginPath();
-    ctx.arc(center, center, radius * 0.1, 0, 2 * Math.PI);
-    ctx.fillStyle = grad;
-    ctx.fill();
-    ctx.strokeStyle = '#d4d0e0';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Draw pointer (triangle at top)
-    const pSize = 16;
-    ctx.beginPath();
-    ctx.moveTo(center, 8);
-    ctx.lineTo(center - pSize, -6);
-    ctx.lineTo(center + pSize, -6);
-    ctx.closePath();
-    ctx.fillStyle = '#7c3aed';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }, [names]);
-
-  // Resize and draw
-  useEffect(() => {
+  // ── Draw at current angle ──
+  const redraw = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(dprRef.current, dprRef.current);
+    drawWheel(ctx, sizeRef.current, namesRef.current, angleRef.current);
+    ctx.restore();
+  };
 
-    const render = () => {
-      const container = canvas.parentElement;
-      const size = Math.min(container.clientWidth, container.clientHeight, 400);
-      if (size <= 0) return;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = size * dpr;
-      canvas.height = size * dpr;
-      canvas.style.width = `${size}px`;
-      canvas.style.height = `${size}px`;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
-      draw(ctx, size, currentRotation.current);
+  // ── Initial draw + resize ──
+  useEffect(() => {
+    // Reset angle when names change
+    angleRef.current = 0;
+
+    const handleResize = () => {
+      if (setupCanvas()) redraw();
     };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [names]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-    render();
-    window.addEventListener('resize', render);
-    return () => window.removeEventListener('resize', render);
-  }, [names, draw, rotation]);
-
-  // Spin animation
+  // ── Spin animation (completely self-contained, no React state) ──
   useEffect(() => {
     if (!spinning || targetIndex == null || names.length === 0) return;
 
-    // Always start from 0 to avoid accumulated error
-    currentRotation.current = 0;
+    // Cancel any lingering animation
+    if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
+
+    // Make sure canvas is set up
+    setupCanvas();
 
     const n = names.length;
-    const arcSize = (2 * Math.PI) / n;
+    const arc = (2 * Math.PI) / n;
 
-    // The segment at index i has its center at clockwise angle (i+0.5)*arcSize from 12 o'clock.
-    // To rotate the wheel so that segment lands at the top (pointer), we need:
-    //   rotation = 2*PI - (i+0.5)*arcSize
-    // This is always positive since (i+0.5)*arcSize < 2*PI for valid indices.
-    const landingAngle = 2 * Math.PI - (targetIndex + 0.5) * arcSize;
+    // ── Landing angle calculation ──
+    // Segment i's center is at (i+0.5)*arc clockwise from 12-o'clock.
+    // To bring segment i's center to the pointer (12-o'clock), rotate by:
+    //   2*PI - (i+0.5)*arc
+    // This value is always in (0, 2*PI) for valid indices.
+    const landing = 2 * Math.PI - (targetIndex + 0.5) * arc;
 
-    // Add full rotations for visual effect (5-8 full spins)
-    const fullRotations = (5 + Math.random() * 3) * 2 * Math.PI;
-    const totalAngle = fullRotations + landingAngle;
+    // Full spins (5–8) + landing offset
+    const fullSpins = (5 + Math.random() * 3) * 2 * Math.PI;
+    const totalAngle = fullSpins + landing;
+
+    // Always start from angle 0
+    angleRef.current = 0;
 
     const duration = 4500;
-    const startTime = performance.now();
+    const t0 = performance.now();
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
-    const animate = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+    const tick = (now) => {
+      const progress = Math.min((now - t0) / duration, 1);
       const eased = easeOut(progress);
 
       if (progress < 1) {
-        const newRot = totalAngle * eased;
-        currentRotation.current = newRot;
-        setRotation(newRot);
-        animRef.current = requestAnimationFrame(animate);
+        // Mid-animation: interpolate
+        angleRef.current = totalAngle * eased;
+        redraw();
+        animIdRef.current = requestAnimationFrame(tick);
       } else {
-        // Force EXACT landing angle on final frame
-        currentRotation.current = landingAngle;
-        setRotation(landingAngle);
+        // ── Final frame: force exact landing angle ──
+        angleRef.current = landing;
+        redraw();
 
-        // Reverse-compute which segment is actually at the pointer
-        // With rotation R, segment i's center is at: (i+0.5)*arcSize - PI/2 + R
-        // Pointer is at -PI/2, so we need (i+0.5)*arcSize + R ≡ 0 (mod 2PI)
-        // i = ((2PI - R) / arcSize - 0.5) mod n
-        const normRot = ((landingAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const rawIndex = Math.round((2 * Math.PI - normRot) / arcSize - 0.5);
-        const actualIndex = ((rawIndex % n) + n) % n;
+        // Read which segment is actually at the pointer
+        const landed = segmentAtPointer(landing, n);
 
-        console.log('[Wheel] target:', targetIndex, names[targetIndex],
-          '| landed:', actualIndex, names[actualIndex],
-          '| angle:', landingAngle.toFixed(4));
+        console.log(
+          '[Wheel] target:', targetIndex, `"${namesRef.current[targetIndex]}"`,
+          '| landed:', landed, `"${namesRef.current[landed]}"`,
+          '| angle:', landing.toFixed(6)
+        );
 
-        // Pass the ACTUAL landed index back (use ref so this doesn't restart animation)
-        if (onSpinEndRef.current) onSpinEndRef.current(actualIndex);
+        if (onSpinEndRef.current) onSpinEndRef.current(landed);
       }
     };
 
-    animRef.current = requestAnimationFrame(animate);
+    animIdRef.current = requestAnimationFrame(tick);
+
     return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
     };
-    // NOTE: onSpinEnd is NOT in deps — we use onSpinEndRef to avoid restarting animation
-  }, [spinning, targetIndex, names.length, names]);
+  }, [spinning, targetIndex, names]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (names.length === 0) {
     return (
@@ -210,7 +247,3 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
     </div>
   );
 }
-
-// Memo prevents re-render when parent re-renders with same props
-const WheelCanvas = memo(WheelCanvasInner);
-export default WheelCanvas;
