@@ -126,7 +126,7 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
   useEffect(() => {
     if (!spinning || targetIndex == null || names.length === 0) return;
 
-    const totalAngle = getTargetAngle(targetIndex, names.length);
+    const totalAngle = getTargetAngle(targetIndex, names.length, currentRotation.current);
     const duration = 4500;
     const startTime = performance.now();
     const startRot = currentRotation.current;

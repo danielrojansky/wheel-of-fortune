@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { getEvent, spin } from '../../lib/api';
@@ -16,28 +16,11 @@ export default function EventPage() {
   const [targetIndex, setTargetIndex] = useState(null);
   const [result, setResult] = useState(null);
   const [spinError, setSpinError] = useState('');
-  const lastDataRef = useRef('');
-  const spinningRef = useRef(false);
-
-  // Keep ref in sync so the interval callback sees current value
-  useEffect(() => {
-    spinningRef.current = spinning;
-  }, [spinning]);
 
   const fetchEvent = useCallback(async () => {
-    // Don't update state while spinning — prevents flashing
-    if (spinningRef.current) return;
     try {
       const data = await getEvent(shareToken);
-      // Sort arrays so Redis' arbitrary SMEMBERS order doesn't cause false diffs
-      if (data.canReceive) data.canReceive.sort();
-      if (data.canSpin) data.canSpin.sort();
-      const json = JSON.stringify(data);
-      // Only update state if data actually changed
-      if (json !== lastDataRef.current) {
-        lastDataRef.current = json;
-        setEvent(data);
-      }
+      setEvent(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,14 +28,9 @@ export default function EventPage() {
     }
   }, [shareToken]);
 
+  // Fetch once on load — no polling
   useEffect(() => {
     fetchEvent();
-  }, [fetchEvent]);
-
-  // Refresh event data periodically
-  useEffect(() => {
-    const interval = setInterval(fetchEvent, 5000);
-    return () => clearInterval(interval);
   }, [fetchEvent]);
 
   // Get wheel names: canReceive children, excluding the selected spinner
@@ -101,8 +79,6 @@ export default function EventPage() {
     setResult(null);
     setSelectedChild('');
     setTargetIndex(null);
-    // Clear cache so next fetch always updates
-    lastDataRef.current = '';
     fetchEvent();
   };
 

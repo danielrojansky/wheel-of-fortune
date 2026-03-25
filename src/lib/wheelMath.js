@@ -13,14 +13,18 @@ export function getSegments(names) {
   }));
 }
 
-export function getTargetAngle(targetIndex, totalSegments) {
+export function getTargetAngle(targetIndex, totalSegments, currentRotation) {
   const arcSize = (2 * Math.PI) / totalSegments;
-  // Angle to center of target segment, pointer is at top (- PI/2)
-  const targetMid = targetIndex * arcSize + arcSize / 2;
-  // We need the wheel to rotate so this segment is at the top
-  // Add random full rotations (5-8) for visual effect
+  const targetMid = (targetIndex + 0.5) * arcSize;
+  // Desired final rotation (mod 2PI) so target segment center is at the pointer (top)
+  const desiredFinal = ((2 * Math.PI - targetMid) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  const currentMod = ((currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  // Delta from current position to desired position
+  let delta = desiredFinal - currentMod;
+  if (delta < 0) delta += 2 * Math.PI;
+  // Add full rotations (5-8) for visual effect
   const fullRotations = (5 + Math.random() * 3) * 2 * Math.PI;
-  return fullRotations + (2 * Math.PI - targetMid);
+  return fullRotations + delta;
 }
 
 // Bright, distinct colors for wheel segments

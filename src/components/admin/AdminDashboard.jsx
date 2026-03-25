@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw, ArrowRight, Download, ClipboardList } from 'lucide-react';
-import { getAdminEvent, addChild, removeChild, resetEvent } from '../../lib/api';
+import { Copy, Check, Share2, MessageCircle, Plus, Trash2, Gift, Users, RotateCcw, ArrowRight, Download, ClipboardList, ExternalLink, UserX } from 'lucide-react';
+import { getAdminEvent, addChild, removeChild, removeAllChildren, resetEvent } from '../../lib/api';
 import { saveEvent } from '../../lib/eventsStorage';
 
 export default function AdminDashboard() {
@@ -45,9 +45,8 @@ export default function AdminDashboard() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const shareSMS = () => {
-    const text = `🎁 חילופי מתנות "${event.eventName}" - לחצו כאן: ${shareUrl}`;
-    window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
+  const openEventPage = () => {
+    window.open(shareUrl, '_blank');
   };
 
   const handleAddChild = async () => {
@@ -79,6 +78,16 @@ export default function AdminDashboard() {
     if (!confirm('בטוח לאפס את האירוע? כל ההגרלות יימחקו וכל הילדים יחזרו לרשימה.')) return;
     try {
       await resetEvent(adminToken);
+      await fetchEvent();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRemoveAll = async () => {
+    if (!confirm('בטוח להסיר את כל המשתתפים? פעולה זו תמחק את כל הילדים וההגרלות.')) return;
+    try {
+      await removeAllChildren(adminToken);
       await fetchEvent();
     } catch (err) {
       alert(err.message);
@@ -174,11 +183,11 @@ export default function AdminDashboard() {
             <span className="truncate">שתפו בוואטסאפ</span>
           </button>
           <button
-            onClick={shareSMS}
+            onClick={openEventPage}
             className="flex items-center justify-center gap-2 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium text-sm"
           >
-            <Share2 className="w-5 h-5 shrink-0" />
-            <span className="truncate">שתפו ב-SMS</span>
+            <ExternalLink className="w-5 h-5 shrink-0" />
+            <span className="truncate">פתח דף אירוע</span>
           </button>
         </div>
       </div>
@@ -273,6 +282,15 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+        {childrenList.length > 0 && (
+          <button
+            onClick={handleRemoveAll}
+            className="w-full flex items-center justify-center gap-2 mt-3 py-2 text-sm text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition border border-red-200"
+          >
+            <UserX className="w-4 h-4" />
+            הסר את כל המשתתפים
+          </button>
+        )}
       </div>
 
       {/* Reset Event */}

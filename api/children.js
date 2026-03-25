@@ -10,6 +10,9 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     return removeChild(req, res);
   }
+  if (req.method === 'PATCH') {
+    return removeAllChildren(req, res);
+  }
   res.status(405).json({ error: 'Method not allowed' });
 }
 
@@ -52,6 +55,27 @@ async function removeChild(req, res) {
   await redis.hdel(`wheel:event:${eventId}:children`, childId);
   await redis.srem(`wheel:event:${eventId}:canReceive`, childId);
   await redis.srem(`wheel:event:${eventId}:canSpin`, childId);
+
+  res.json({ ok: true });
+}
+
+async function removeAllChildren(req, res) {
+  const { adminToken } = req.body;
+  if (!adminToken) {
+    return res.status(400).json({ error: 'Missing adminToken' });
+  }
+
+  const eventId = await redis.get(`wheel:admin:${adminToken}`);
+  if (!eventId) return res.status(403).json({ error: 'אין הרשאה' });
+
+  // Delete all children-related keys
+  await Promise.all([
+    redis.del(`wheel:event:${eventId}:children`),
+    redis.del(`wheel:event:${eventId}:canReceive`),
+    redis.del(`wheel:event:${eventId}:canSpin`),
+    redis.del(`wheel:event:${eventId}:assignments`),
+    redis.del(`wheel:event:${eventId}:spinlock`),
+  ]);
 
   res.json({ ok: true });
 }

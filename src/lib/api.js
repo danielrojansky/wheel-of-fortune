@@ -43,6 +43,13 @@ export function removeChild(adminToken, childId) {
   });
 }
 
+export function removeAllChildren(adminToken) {
+  return request('/children', {
+    method: 'PATCH',
+    body: JSON.stringify({ adminToken }),
+  });
+}
+
 export function spin(shareToken, giverId) {
   return request('/spin', {
     method: 'POST',
