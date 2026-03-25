@@ -7,6 +7,9 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
   const [rotation, setRotation] = useState(0);
   const currentRotation = useRef(0);
   const prevNamesKey = useRef('');
+  // Use a ref for the callback so changing it doesn't restart the animation
+  const onSpinEndRef = useRef(onSpinEnd);
+  onSpinEndRef.current = onSpinEnd;
 
   // Reset rotation when the set of names changes
   const namesKey = names.join('|');
@@ -137,14 +140,16 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
     // Always start from 0 to avoid accumulated error
     currentRotation.current = 0;
 
-    // Compute the exact landing angle so targetIndex's segment center is at the pointer (top).
-    // Segments are drawn offset by -PI/2, so segment i's center is at (i+0.5)*arcSize - PI/2.
-    // For that center to align with the pointer (also at -PI/2), we need:
-    //   rotation = -(i+0.5) * arcSize  (mod 2PI)
-    const arcSize = (2 * Math.PI) / names.length;
-    const landingAngle = ((-(targetIndex + 0.5) * arcSize) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    const n = names.length;
+    const arcSize = (2 * Math.PI) / n;
 
-    // Add 5-8 full rotations for visual effect
+    // The segment at index i has its center at clockwise angle (i+0.5)*arcSize from 12 o'clock.
+    // To rotate the wheel so that segment lands at the top (pointer), we need:
+    //   rotation = 2*PI - (i+0.5)*arcSize
+    // This is always positive since (i+0.5)*arcSize < 2*PI for valid indices.
+    const landingAngle = 2 * Math.PI - (targetIndex + 0.5) * arcSize;
+
+    // Add full rotations for visual effect (5-8 full spins)
     const fullRotations = (5 + Math.random() * 3) * 2 * Math.PI;
     const totalAngle = fullRotations + landingAngle;
 
@@ -163,10 +168,24 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
         setRotation(newRot);
         animRef.current = requestAnimationFrame(animate);
       } else {
-        // Force EXACT landing angle on final frame (no floating point drift)
+        // Force EXACT landing angle on final frame
         currentRotation.current = landingAngle;
         setRotation(landingAngle);
-        if (onSpinEnd) onSpinEnd();
+
+        // Reverse-compute which segment is actually at the pointer
+        // With rotation R, segment i's center is at: (i+0.5)*arcSize - PI/2 + R
+        // Pointer is at -PI/2, so we need (i+0.5)*arcSize + R ≡ 0 (mod 2PI)
+        // i = ((2PI - R) / arcSize - 0.5) mod n
+        const normRot = ((landingAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const rawIndex = Math.round((2 * Math.PI - normRot) / arcSize - 0.5);
+        const actualIndex = ((rawIndex % n) + n) % n;
+
+        console.log('[Wheel] target:', targetIndex, names[targetIndex],
+          '| landed:', actualIndex, names[actualIndex],
+          '| angle:', landingAngle.toFixed(4));
+
+        // Pass the ACTUAL landed index back (use ref so this doesn't restart animation)
+        if (onSpinEndRef.current) onSpinEndRef.current(actualIndex);
       }
     };
 
@@ -174,7 +193,8 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [spinning, targetIndex, names.length, onSpinEnd]);
+    // NOTE: onSpinEnd is NOT in deps — we use onSpinEndRef to avoid restarting animation
+  }, [spinning, targetIndex, names.length, names]);
 
   if (names.length === 0) {
     return (

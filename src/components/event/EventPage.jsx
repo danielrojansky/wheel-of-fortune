@@ -17,6 +17,8 @@ export default function EventPage() {
   const [result, setResult] = useState(null);
   const [spinError, setSpinError] = useState('');
   const [hasSpun, setHasSpun] = useState(false);
+  // The name the wheel ACTUALLY landed on (reverse-computed from final rotation)
+  const [landedName, setLandedName] = useState('');
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -70,16 +72,23 @@ export default function EventPage() {
     }
   };
 
-  const handleSpinEnd = () => {
+  // Called by WheelCanvas with the index of the segment that actually ended up at the pointer
+  const handleSpinEnd = useCallback((actualLandedIndex) => {
     setSpinning(false);
-    // Result modal is shown based on result state
-  };
+    // Use the name from the wheel's actual visual landing position
+    if (actualLandedIndex != null && wheelNames[actualLandedIndex]) {
+      setLandedName(wheelNames[actualLandedIndex]);
+      console.log('[EventPage] Wheel landed on:', wheelNames[actualLandedIndex],
+        '| API assigned:', result?.receiverName);
+    }
+  }, [wheelNames, result]);
 
   const handleCloseResult = () => {
     setResult(null);
     setSelectedChild('');
     setTargetIndex(null);
     setHasSpun(false);
+    setLandedName('');
     fetchEvent();
   };
 
@@ -100,6 +109,10 @@ export default function EventPage() {
   }
 
   const allDone = event.canSpin.length === 0;
+
+  // Use the wheel-landed name for the popup (guaranteed to match the visual)
+  // Fall back to API result name if landed name isn't available
+  const displayReceiverName = landedName || result?.receiverName || '';
 
   return (
     <div className="max-w-lg mx-auto px-4 py-3 flex flex-col h-dvh">
@@ -151,7 +164,7 @@ export default function EventPage() {
       {result && !spinning && (
         <SpinResult
           giverName={result.giverName}
-          receiverName={result.receiverName}
+          receiverName={displayReceiverName}
           onClose={handleCloseResult}
         />
       )}
