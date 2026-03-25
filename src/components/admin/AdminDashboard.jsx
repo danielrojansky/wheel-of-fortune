@@ -143,7 +143,7 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
       <Link
-        to="/"
+        to="/Admin"
         className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 transition"
       >
         <ArrowRight className="w-4 h-4" />

@@ -65,6 +65,9 @@ async function createEvent(req, res) {
   await redis.sadd(`wheel:event:${eventId}:canReceive`, ...childIds);
   await redis.sadd(`wheel:event:${eventId}:canSpin`, ...childIds);
 
+  // Track event in master set for listing
+  await redis.sadd('wheel:events', eventId);
+
   res.status(201).json({ eventId, adminToken, shareToken });
 }
 
@@ -156,6 +159,7 @@ async function deleteEvent(req, res) {
     redis.del(`wheel:event:${eventId}:spinlock`),
     redis.del(`wheel:admin:${adminToken}`),
     meta.shareToken ? redis.del(`wheel:share:${meta.shareToken}`) : Promise.resolve(),
+    redis.srem('wheel:events', eventId),
   ]);
 
   res.json({ ok: true });

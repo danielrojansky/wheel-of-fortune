@@ -6,7 +6,7 @@ import { saveEvent } from '../../lib/eventsStorage';
 
 const DEFAULT_NAMES = [
   'עומר ר', 'גאיה ע', 'מאיה', 'עידו', 'נועה', 'ליבי', 'יובל',
-  'מעיין ו', 'מיקי', 'גלי', 'אופיר', 'יעל', 'לביא', 'אסף',
+  'מעיין ו', 'מיקי', 'גלי', 'אופיר', 'יעל', 'לביא',
   'ליה', 'מעיין ל', 'אלונה', 'אורי', 'אגם',
 ];
 
@@ -41,7 +41,7 @@ export default function CreateEvent() {
     try {
       const { adminToken } = await createEvent(eventName, names);
       saveEvent(adminToken, eventName);
-      navigate(`/admin/${adminToken}`);
+      navigate(`/Admin/${adminToken}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -52,7 +52,7 @@ export default function CreateEvent() {
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <Link
-        to="/"
+        to="/Admin"
         className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800 transition mb-4"
       >
         <ArrowRight className="w-4 h-4" />

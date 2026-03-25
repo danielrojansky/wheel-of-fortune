@@ -14,6 +14,10 @@ async function request(path, options = {}) {
   return data;
 }
 
+export function listEvents() {
+  return request('/events-list');
+}
+
 export function createEvent(name, children) {
   return request('/events', {
     method: 'POST',
