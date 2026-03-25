@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState, memo } from 'react';
-import { getSegments, getTargetAngle, getColor } from '../../lib/wheelMath';
+import { getSegments, getColor } from '../../lib/wheelMath';
 
 function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
   const canvasRef = useRef(null);
@@ -134,28 +134,38 @@ function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
   useEffect(() => {
     if (!spinning || targetIndex == null || names.length === 0) return;
 
-    // Always spin from current position (which is 0 for fresh names)
-    const startRot = currentRotation.current;
-    const totalAngle = getTargetAngle(targetIndex, names.length, startRot);
+    // Always start from 0 to avoid accumulated error
+    currentRotation.current = 0;
+
+    // Compute the exact landing angle so targetIndex's segment center is at the pointer (top).
+    // Segments are drawn offset by -PI/2, so segment i's center is at (i+0.5)*arcSize - PI/2.
+    // For that center to align with the pointer (also at -PI/2), we need:
+    //   rotation = -(i+0.5) * arcSize  (mod 2PI)
+    const arcSize = (2 * Math.PI) / names.length;
+    const landingAngle = ((-(targetIndex + 0.5) * arcSize) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+
+    // Add 5-8 full rotations for visual effect
+    const fullRotations = (5 + Math.random() * 3) * 2 * Math.PI;
+    const totalAngle = fullRotations + landingAngle;
+
     const duration = 4500;
     const startTime = performance.now();
-
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
     const animate = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOut(progress);
-      const newRot = startRot + totalAngle * eased;
-
-      currentRotation.current = newRot;
-      setRotation(newRot);
 
       if (progress < 1) {
+        const newRot = totalAngle * eased;
+        currentRotation.current = newRot;
+        setRotation(newRot);
         animRef.current = requestAnimationFrame(animate);
       } else {
-        // Normalize to [0, 2PI)
-        currentRotation.current = ((newRot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        // Force EXACT landing angle on final frame (no floating point drift)
+        currentRotation.current = landingAngle;
+        setRotation(landingAngle);
         if (onSpinEnd) onSpinEnd();
       }
     };

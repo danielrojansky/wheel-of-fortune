@@ -16,6 +16,7 @@ export default function EventPage() {
   const [targetIndex, setTargetIndex] = useState(null);
   const [result, setResult] = useState(null);
   const [spinError, setSpinError] = useState('');
+  const [hasSpun, setHasSpun] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -44,7 +45,7 @@ export default function EventPage() {
   const wheelNames = useMemo(() => wheelItems.map((w) => w.name), [wheelItems]);
 
   const handleSpin = async () => {
-    if (!selectedChild || spinning) return;
+    if (!selectedChild || spinning || hasSpun) return;
     setSpinError('');
 
     if (wheelItems.length === 0) {
@@ -62,6 +63,7 @@ export default function EventPage() {
 
       // Store result for after animation
       setResult(res);
+      setHasSpun(true);
     } catch (err) {
       setSpinning(false);
       setSpinError(err.message);
@@ -77,6 +79,7 @@ export default function EventPage() {
     setResult(null);
     setSelectedChild('');
     setTargetIndex(null);
+    setHasSpun(false);
     fetchEvent();
   };
 
@@ -137,7 +140,7 @@ export default function EventPage() {
 
           <button
             onClick={handleSpin}
-            disabled={!selectedChild || spinning || wheelItems.length === 0}
+            disabled={!selectedChild || spinning || hasSpun || wheelItems.length === 0}
             className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-lg shadow-purple-200 shrink-0 mb-2"
           >
             {spinning ? 'הגלגל מסתובב...' : 'סובבו את הגלגל! 🎡'}
