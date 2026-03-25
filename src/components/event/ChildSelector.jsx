@@ -1,8 +1,12 @@
+import { memo, useMemo } from 'react';
 import { User } from 'lucide-react';
 
-export default function ChildSelector({ children, canSpin, selectedId, onChange, disabled }) {
-  // Only show children who haven't spun yet
-  const available = Object.entries(children).filter(([id]) => canSpin.includes(id));
+function ChildSelectorInner({ children, canSpin, selectedId, onChange, disabled }) {
+  // Memoize the filtered list so it only changes when data actually changes
+  const available = useMemo(
+    () => Object.entries(children).filter(([id]) => canSpin.includes(id)),
+    [children, canSpin]
+  );
 
   if (available.length === 0) {
     return null;
@@ -33,3 +37,6 @@ export default function ChildSelector({ children, canSpin, selectedId, onChange,
     </div>
   );
 }
+
+const ChildSelector = memo(ChildSelectorInner);
+export default ChildSelector;

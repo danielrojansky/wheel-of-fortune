@@ -1,17 +1,24 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import { getSegments, getTargetAngle, getColor, getFontSize } from '../../lib/wheelMath';
+import { useRef, useEffect, useCallback, useState, memo } from 'react';
+import { getSegments, getTargetAngle, getColor } from '../../lib/wheelMath';
 
-export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd }) {
+function WheelCanvasInner({ names, targetIndex, spinning, onSpinEnd }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const [rotation, setRotation] = useState(0);
   const currentRotation = useRef(0);
+  const prevNamesKey = useRef('');
+
+  // Reset rotation when the set of names changes
+  const namesKey = names.join('|');
+  if (namesKey !== prevNamesKey.current) {
+    prevNamesKey.current = namesKey;
+    currentRotation.current = 0;
+  }
 
   const draw = useCallback((ctx, size, rot) => {
     const center = size / 2;
     const radius = center - 14;
     const segments = getSegments(names);
-    const n = names.length;
     const fontSize = Math.max(11, Math.min(18, radius * 0.09));
 
     ctx.clearRect(0, 0, size, size);
@@ -52,12 +59,12 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
       ctx.shadowOffsetY = 1;
 
       const textR = radius * 0.62;
-      // Normalize angle to 0..2PI to determine if text is upside down
-      const absAngle = ((seg.midAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      // Normalize the total angle (rotation + segment mid) to determine if text is upside down
+      const totalAngle = rot + seg.midAngle;
+      const absAngle = ((totalAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
       const isBottom = absAngle > Math.PI / 2 && absAngle < (3 * Math.PI) / 2;
 
       if (isBottom) {
-        // Flip 180° so text reads right-side-up
         ctx.translate(textR, 0);
         ctx.rotate(Math.PI);
         ctx.textAlign = 'center';
@@ -107,6 +114,7 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
     const render = () => {
       const container = canvas.parentElement;
       const size = Math.min(container.clientWidth, container.clientHeight, 400);
+      if (size <= 0) return;
       const dpr = window.devicePixelRatio || 1;
       canvas.width = size * dpr;
       canvas.height = size * dpr;
@@ -126,10 +134,11 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
   useEffect(() => {
     if (!spinning || targetIndex == null || names.length === 0) return;
 
-    const totalAngle = getTargetAngle(targetIndex, names.length, currentRotation.current);
+    // Always spin from current position (which is 0 for fresh names)
+    const startRot = currentRotation.current;
+    const totalAngle = getTargetAngle(targetIndex, names.length, startRot);
     const duration = 4500;
     const startTime = performance.now();
-    const startRot = currentRotation.current;
 
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
@@ -145,7 +154,8 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
       if (progress < 1) {
         animRef.current = requestAnimationFrame(animate);
       } else {
-        currentRotation.current = newRot % (2 * Math.PI);
+        // Normalize to [0, 2PI)
+        currentRotation.current = ((newRot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
         if (onSpinEnd) onSpinEnd();
       }
     };
@@ -170,3 +180,7 @@ export default function WheelCanvas({ names, targetIndex, spinning, onSpinEnd })
     </div>
   );
 }
+
+// Memo prevents re-render when parent re-renders with same props
+const WheelCanvas = memo(WheelCanvasInner);
+export default WheelCanvas;

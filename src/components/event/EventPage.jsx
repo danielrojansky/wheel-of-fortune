@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { getEvent, spin } from '../../lib/api';
@@ -33,22 +33,20 @@ export default function EventPage() {
     fetchEvent();
   }, [fetchEvent]);
 
-  // Get wheel names: canReceive children, excluding the selected spinner
-  const getWheelNames = () => {
+  // Memoize wheel items so they only change when actual data changes
+  const wheelItems = useMemo(() => {
     if (!event) return [];
     return event.canReceive
       .filter((id) => id !== selectedChild)
       .map((id) => ({ id, name: event.children[id]?.name || id }));
-  };
+  }, [event, selectedChild]);
 
-  const wheelItems = getWheelNames();
-  const wheelNames = wheelItems.map((w) => w.name);
+  const wheelNames = useMemo(() => wheelItems.map((w) => w.name), [wheelItems]);
 
   const handleSpin = async () => {
     if (!selectedChild || spinning) return;
     setSpinError('');
 
-    // Auto-match if only 1 receiver left (after excluding self)
     if (wheelItems.length === 0) {
       setSpinError('אין ילדים זמינים לבחירה');
       return;
@@ -58,7 +56,7 @@ export default function EventPage() {
       setSpinning(true);
       const res = await spin(shareToken, selectedChild);
 
-      // Find the index of the selected receiver in the wheel
+      // Find the index of the selected receiver in the current wheel
       const idx = wheelItems.findIndex((w) => w.id === res.receiverId);
       setTargetIndex(idx >= 0 ? idx : 0);
 
