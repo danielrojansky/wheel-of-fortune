@@ -81,7 +81,7 @@ export default function EventManager() {
           <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 mb-4">אין אירועים עדיין</p>
           <button
-            onClick={() => navigate('/Admin/new')}
+            onClick={() => navigate('/admin/new')}
             className="px-6 py-2.5 bg-purple-600 text-white font-medium rounded-xl hover:bg-purple-700 transition"
           >
             צרו אירוע חדש
@@ -154,7 +154,7 @@ export default function EventManager() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => navigate(`/Admin/${ev.adminToken}`)}
+                  onClick={() => navigate(`/admin/${ev.adminToken}`)}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 active:bg-purple-300 transition text-sm font-medium"
                 >
                   <Settings className="w-4 h-4" />
@@ -181,7 +181,7 @@ export default function EventManager() {
       )}
 
       <button
-        onClick={() => navigate('/Admin/new')}
+        onClick={() => navigate('/admin/new')}
         className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 text-white font-medium rounded-xl hover:bg-purple-700 transition text-lg shadow-lg shadow-purple-200"
       >
         <Plus className="w-5 h-5" />
